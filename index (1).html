@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Frekans — Anlık Sohbet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+  <!-- KATILIM EKRANI -->
+  <div id="join-screen">
+    <div class="tuner-card">
+      <div class="tuner-eyebrow">SİNYAL ARANIYOR</div>
+      <h1 class="tuner-title">FREKANS</h1>
+      <p class="tuner-sub">Bir kanal adı seç, yayına gir.</p>
+      <div class="waveform" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="dial-readout" aria-hidden="true">88.5&nbsp;MHz</div>
+      <form id="join-form" autocomplete="off">
+        <input id="username-input" type="text" maxlength="20" placeholder="Adını yaz..." required />
+        <button type="submit" id="join-btn">KANALA BAĞLAN</button>
+      </form>
+      <p id="join-error" class="join-error hidden"></p>
+    </div>
+  </div>
+
+  <!-- SOHBET EKRANI -->
+  <div id="chat-screen" class="hidden">
+    <div class="chat-layout">
+      <div class="chat-main">
+        <header class="chat-header">
+          <div class="brand">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span class="brand-name">FREKANS</span>
+          </div>
+          <div class="status">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span id="online-count" class="status-text">0 çevrimiçi</span>
+            <button id="admin-btn" class="admin-btn" title="Admin yetkisi al">🔑</button>
+          </div>
+        </header>
+
+        <main id="messages" class="messages"></main>
+
+        <div id="typing-indicator" class="typing-indicator hidden">
+          <span class="typing-dots"><span></span><span></span><span></span></span>
+          <span id="typing-text"></span>
+        </div>
+
+        <footer class="composer">
+          <div id="dm-info" class="dm-info hidden">
+            <span id="dm-target-label">Özel mesaj: <strong id="dm-target-name"></strong></span>
+            <button id="dm-cancel-btn" type="button">✕ İptal</button>
+          </div>
+
+          <div class="composer-row">
+            <button id="file-btn" type="button" aria-label="Dosya ekle" title="Resim veya Video ekle">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="2.18" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="M22 15l-5-5-5 5-5-5-5 5" />
+              </svg>
+            </button>
+            <input id="file-input" type="file" accept="image/*,video/*" style="display:none" />
+
+            <input id="message-input" type="text" maxlength="500" placeholder="Mesaj yaz, dosya ekle..." autocomplete="off" />
+            <button id="send-btn" type="button" aria-label="Gönder">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M3 11.5L21 3L13.5 21L11 13L3 11.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+        </footer>
+      </div>
+
+      <aside class="user-panel">
+        <h3>📡 Çevrimiçi</h3>
+        <ul id="user-list"></ul>
+      </aside>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

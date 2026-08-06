@@ -1,5 +1,5 @@
 """
-Frekans - Video & Resim Paylaşımlı, Ban Sistemi, Özel Mesaj (DM), Mesaj Silme (Admin)
+Frekans - Video & Resim & Ses Paylaşımlı, Ban Sistemi, Özel Mesaj (DM), Mesaj Silme (Admin)
 Admin yetkisi: 7777 kodu ile etkinleştirilir.
 """
 
@@ -25,8 +25,10 @@ banned_users = {}           # { username: ban_bitis_zamani (timestamp) }
 MAX_HISTORY = 50
 MAX_IMAGE_SIZE = 25 * 1024 * 1024   # 25 MB
 MAX_VIDEO_SIZE = 20 * 1024 * 1024   # 20 MB
+MAX_AUDIO_SIZE = 5 * 1024 * 1024    # 5 MB
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 ALLOWED_VIDEO_TYPES = {"video/mp4", "video/webm", "video/ogg"}
+ALLOWED_AUDIO_TYPES = {"audio/webm", "audio/ogg", "audio/mpeg", "audio/wav"}
 
 BAN_DURATION = 3600  # 1 saat (saniye)
 ADMIN_CODE = "7777"
@@ -175,9 +177,10 @@ def handle_send_message(data):
     text = (data or {}).get("text", "").strip()[:500]
     image_data = (data or {}).get("image", "").strip()
     video_data = (data or {}).get("video", "").strip()
+    audio_data = (data or {}).get("audio", "").strip()
     to_user = (data or {}).get("to", "").strip()
 
-    if not text and not image_data and not video_data:
+    if not text and not image_data and not video_data and not audio_data:
         return
 
     if image_data:
@@ -198,6 +201,15 @@ def handle_send_message(data):
         except:
             return
 
+    if audio_data:
+        try:
+            header, encoded = audio_data.split(",", 1)
+            mime_type = header.split(":")[1].split(";")[0]
+            if mime_type not in ALLOWED_AUDIO_TYPES or len(encoded) > MAX_AUDIO_SIZE * 4 / 3:
+                return
+        except:
+            return
+
     message = {
         "id": str(uuid.uuid4()),
         "username": sender,
@@ -209,6 +221,8 @@ def handle_send_message(data):
         message["image"] = image_data
     if video_data:
         message["video"] = video_data
+    if audio_data:
+        message["audio"] = audio_data
 
     # Özel mesaj mı?
     if to_user and to_user in {u["username"] for u in connected_users.values()}:

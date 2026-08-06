@@ -1,5 +1,5 @@
 /* =========================================================
-   FREKANS — tam stil (video, ban, DM)
+   FREKANS — tam stil (video, ban, DM, ses)
    ========================================================= */
 :root {
   --bg: #10182B;
@@ -399,6 +399,15 @@ button:focus-visible {
   background: #000;
 }
 
+/* Ses oynatıcı */
+.msg-audio {
+  width: 100%;
+  max-width: 250px;
+  margin-top: 6px;
+  border-radius: 8px;
+}
+.msg-audio:only-child { margin-top: 0; }
+
 .system-msg {
   align-self: center;
   color: var(--text-muted);
@@ -486,6 +495,33 @@ button:focus-visible {
   color: var(--text);
 }
 
+/* Ses kaydetme butonu */
+#audio-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#audio-btn:hover {
+  background: var(--border);
+  color: var(--accent-2);
+}
+#audio-btn.recording {
+  color: #ff4d4d;
+  animation: pulse-rec 0.8s infinite;
+}
+@keyframes pulse-rec {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
 #message-input {
   flex: 1;
   background: var(--bg);
@@ -511,6 +547,41 @@ button:focus-visible {
 }
 #send-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
 #send-btn:active { transform: translateY(0); }
+
+/* Kayıt durumu göstergesi */
+.recording-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-size: 13px;
+  color: var(--accent-2);
+}
+.recording-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff4d4d;
+  animation: pulse-dot 0.8s infinite;
+}
+#recording-timer {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+#cancel-recording-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+#cancel-recording-btn:hover {
+  background: var(--border);
+  color: var(--text);
+}
 
 /* ===== ADMIN BUTONU ===== */
 .admin-btn {
@@ -561,7 +632,8 @@ button:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .waveform span, .status-dot, .typing-dots span, .msg-row {
+  .waveform span, .status-dot, .typing-dots span, .msg-row,
+  #audio-btn.recording, .recording-dot {
     animation: none !important;
   }
 }

@@ -10,6 +10,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const sendBtn = document.getElementById("send-btn");
   const fileBtn = document.getElementById("file-btn");
   const fileInput = document.getElementById("file-input");
+  const audioBtn = document.getElementById("audio-btn");
+  const recordingIndicator = document.getElementById("recording-indicator");
+  const recordingTimer = document.getElementById("recording-timer");
+  const cancelRecordingBtn = document.getElementById("cancel-recording-btn");
   const onlineCountEl = document.getElementById("online-count");
   const typingIndicator = document.getElementById("typing-indicator");
   const typingText = document.getElementById("typing-text");
@@ -25,6 +29,14 @@ document.addEventListener("DOMContentLoaded", () => {
   let dmTarget = null;
   let isAdmin = false;
 
+  // --- Ses kaydı değişkenleri ---
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let recordingStartTime = null;
+  let recordingTimerInterval = null;
+  let isRecording = false;
+  const MAX_RECORDING_DURATION = 60; // saniye
+
   function getUserColor(name) {
     const colors = ["var(--u1)","var(--u2)","var(--u3)","var(--u4)","var(--u5)","var(--u6)","var(--u7)","var(--u8)"];
     let hash = 0;
@@ -38,6 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const payload = { text };
     if (fileData && fileType === "image") payload.image = fileData;
     if (fileData && fileType === "video") payload.video = fileData;
+    if (fileData && fileType === "audio") payload.audio = fileData;
     if (dmTarget) payload.to = dmTarget;
     socket.emit("send_message", payload);
   }
@@ -73,7 +86,6 @@ document.addEventListener("DOMContentLoaded", () => {
       meta.appendChild(dmLabel);
     }
 
-    // Admin ise ve DM değilse silme butonu
     if (isAdmin && !msg.is_dm) {
       const deleteBtn = document.createElement("button");
       deleteBtn.className = "msg-delete-btn";
@@ -113,6 +125,14 @@ document.addEventListener("DOMContentLoaded", () => {
       video.controls = true;
       video.preload = "metadata";
       bubble.appendChild(video);
+    }
+    if (msg.audio) {
+      const audio = document.createElement("audio");
+      audio.className = "msg-audio";
+      audio.src = msg.audio;
+      audio.controls = true;
+      audio.preload = "metadata";
+      bubble.appendChild(audio);
     }
 
     body.appendChild(bubble);
@@ -220,6 +240,90 @@ document.addEventListener("DOMContentLoaded", () => {
     socket.emit("admin_auth", { code: code.trim() });
   });
 
+  // --- SES KAYDI ---
+  async function startRecording() {
+    if (isRecording) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+
+      mediaRecorder.ondataavailable = event => {
+        audioChunks.push(event.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64data = reader.result;
+          sendMessage("", base64data, "audio");
+          // Temizlik
+          stream.getTracks().forEach(track => track.stop());
+        };
+        reader.readAsDataURL(audioBlob);
+        // UI temizle
+        stopRecordingUI();
+      };
+
+      mediaRecorder.start();
+      isRecording = true;
+      recordingStartTime = Date.now();
+      recordingTimer.textContent = "0s";
+      recordingIndicator.classList.remove("hidden");
+      audioBtn.classList.add("recording");
+      audioBtn.title = "Kaydediliyor...";
+
+      // Timer güncelle
+      recordingTimerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+        recordingTimer.textContent = `${elapsed}s`;
+        if (elapsed >= MAX_RECORDING_DURATION) {
+          stopRecording();
+        }
+      }, 500);
+    } catch (err) {
+      console.error("Mikrofon erişimi hatası:", err);
+      renderSystemMessage("❌ Mikrofon erişilemedi. Lütfen izin verin.");
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      isRecording = false;
+      clearInterval(recordingTimerInterval);
+    }
+  }
+
+  function stopRecordingUI() {
+    isRecording = false;
+    recordingIndicator.classList.add("hidden");
+    audioBtn.classList.remove("recording");
+    audioBtn.title = "Sesli mesaj (maks 60 sn)";
+    clearInterval(recordingTimerInterval);
+  }
+
+  function cancelRecording() {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.onstop = () => {
+        // Kaydı iptal et, gönderme
+        stopRecordingUI();
+        // stream'i durdur
+        if (mediaRecorder.stream) {
+          mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        }
+      };
+      mediaRecorder.stop();
+    } else {
+      stopRecordingUI();
+    }
+  }
+
+  audioBtn.addEventListener("click", startRecording);
+  cancelRecordingBtn.addEventListener("click", cancelRecording);
+
+  // --- JOIN ---
   joinForm.addEventListener("submit", (e) => {
     e.preventDefault();
     const username = usernameInput.value.trim();
@@ -295,24 +399,7 @@ document.addEventListener("DOMContentLoaded", () => {
         isAdmin = true;
         adminBtn.classList.add("active");
         renderSystemMessage("✅ Admin yetkisi alındı! Artık kullanıcıları banlayabilir ve mesajları silebilirsiniz.");
-        // Mevcut mesajları yeniden render et (silme butonlarını eklemek için)
-        // Tüm mesajları temizleyip yeniden ekleyelim
-        const allMessages = document.querySelectorAll(".msg-row");
-        // Mesajları yeniden render etmek yerine, mevcut mesajlara silme butonlarını ekleyelim
-        // Daha basit: sayfayı yenilemeden admin olduğunda silme butonları gelmiyor, ama yeni mesajlar gelince gelir.
-        // Bunu düzeltmek için mevcut mesajları yeniden render edelim
-        const currentMessages = [];
-        document.querySelectorAll(".msg-row").forEach(row => {
-          const id = row.dataset.messageId;
-          // Bu id'ye sahip mesajı history'den bul
-          // Biz history'yi tutmuyoruz, ama message_history sunucuda.
-          // O yüzden burada mevcut DOM'u temizleyip sunucudan tekrar history istemek lazım.
-          // Bunun yerine pratik bir çözüm: sayfayı yenile (F5)
-          // Ama daha iyisi: admin olduktan sonra mesajları yeniden render etmek için sunucudan history isteyelim.
-          // Bunun için bir event ekleyebiliriz, ama şimdilik mevcut mesajlara silme butonlarını elle ekleyelim.
-          // Kısa yol: sayfayı yenilemesini söyleyelim.
-        });
-        // Basit çözüm: kullanıcıya sayfayı yenilemesini söyle
+        // Mevcut mesajlara silme butonlarını ekle (kolay yol: sayfayı yenile uyarısı)
         renderSystemMessage("🔄 Değişikliklerin tamamen görünmesi için sayfayı yenileyin (F5).");
       } else {
         renderSystemMessage(`❌ ${data.message || "Geçersiz kod."}`);
@@ -341,6 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // --- MESAJ GÖNDERME (metin + dosya) ---
   function handleSend() {
     const text = messageInput.value.trim();
     let fileData = null;
@@ -393,5 +481,5 @@ document.addEventListener("DOMContentLoaded", () => {
   fileBtn.addEventListener("click", () => fileInput.click());
   dmCancelBtn.addEventListener("click", cancelDM);
 
-  console.log("Frekans video, ban, DM ve mesaj silme sistemi aktif!");
+  console.log("Frekans video, ban, DM, mesaj silme ve SESLİ MESAJ sistemi aktif!");
 });

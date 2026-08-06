@@ -67,12 +67,27 @@
             </button>
             <input id="file-input" type="file" accept="image/*,video/*" style="display:none" />
 
+            <!-- Ses kaydetme butonu -->
+            <button id="audio-btn" type="button" aria-label="Ses kaydet" title="Sesli mesaj (maks 60 sn)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1v10M5 7v5a7 7 0 0 0 14 0V7" />
+                <rect x="4" y="12" width="16" height="2" rx="1" />
+              </svg>
+            </button>
+
             <input id="message-input" type="text" maxlength="500" placeholder="Mesaj yaz, dosya ekle..." autocomplete="off" />
             <button id="send-btn" type="button" aria-label="Gönder">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M3 11.5L21 3L13.5 21L11 13L3 11.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
               </svg>
             </button>
+          </div>
+
+          <!-- Kayıt durumu göstergesi -->
+          <div id="recording-indicator" class="recording-indicator hidden">
+            <span class="recording-dot"></span>
+            <span id="recording-timer">0s</span>
+            <button id="cancel-recording-btn" type="button">✕ İptal</button>
           </div>
         </footer>
       </div>

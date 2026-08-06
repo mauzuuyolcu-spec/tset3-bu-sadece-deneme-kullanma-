@@ -1,1 +1,0 @@
-# tset3-bu-sadece-deneme-kullanma-
